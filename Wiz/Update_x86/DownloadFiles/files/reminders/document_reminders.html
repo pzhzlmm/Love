@@ -1,0 +1,892 @@
+﻿<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <link rel="stylesheet" href="style.css">
+        <link rel="stylesheet" href="more.css">
+        <link rel="stylesheet" href="../js/bootstrap/css/bootstrap.min.css">
+        <script src="../js/jquery-3.3.1.min.js"></script>
+        <script src="../js/bootstrap/js/bootstrap.bundle.min.js"></script>
+        <script src="../js/bootstrap/js/bootstrap.min.js"></script>      
+        <style type="text/css">
+            body{
+                font-family: 'Microsoft YaHei', Tahoma, Helvetica, Arial, "\5b8b\4f53", sans-serif;
+            }
+            div.right{
+                position:absolute;
+                top: 30%;
+                right: 0.8rem;
+            }
+            div.wiz-list-item{
+                background-color: #ffffff;
+                padding: .25rem 1.25rem;
+            }
+            .custom-checkbox{
+                pointer-events: none;
+            }
+            .custom-control-label{
+                margin-left: -0.75rem;
+            }
+            .custom-control-label::after{
+                pointer-events: auto;
+            }
+            .custom-control-label:hover::after{
+                cursor: pointer;
+            }
+            div.more{
+                margin-top:-0.25rem;
+            }
+            .list-group-flush > .list-group-item:first-child{
+                border-top: 0;
+            }
+            .list-group-flush > .list-group-item:last-child{
+                border-bottom: 0;
+            }
+            .wiz-font-normal{
+                font-size: 14px;
+            }
+            .wiz-font-small{
+                font-size: 12px;
+            }
+            .wiz-color-text{
+                color:#3e4349;
+            }
+            .wiz-color-info{
+                color:#9ea7b4;
+            }
+            .wiz-color-hint{
+                color:#9ea7b5;
+            }
+            .wiz-color-warning{
+                color:#ff3030;
+            }
+            .wiz-color-highlight{
+                color:#448aff;
+            }
+            .wiz-color-notify{
+                color:#a5b4cc;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="documentTitleBar" class="d-flex align-items-center ml-3 mb-3 mt-1">
+            <span class="mr-auto wiz-font-normal wiz-color-info" id="todayLabel">Reminders Today</span>
+            <span class="mr-auto wiz-font-normal wiz-color-info" id="documentLabel">Reminders</span>
+            <a href="javascript:void(0)" id="addReminder" class="mr-2 wiz-font-normal wiz-color-highlight">Add</a>
+            <div class="dropdown mr-2 more">
+                <!-- <img id="dropDown1" src="more.svg" class="dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> -->
+                <button type="button" class="more" style="width:20px; height:20px;" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="more"></button>
+                <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropDown1">
+                    <a class="dropdown-item wiz-font-normal wiz-color-text" id="showFinishedReminders">Show completed reminders</a>
+                </div>
+            </div>
+        </div>
+        <div id='reminderList'></div>
+        <div id="contextMenu" class="dropdown-menu">
+            <a class="dropdown-item edit wiz-font-normal" href="#" id="edit">Edit</a>
+            <a class="dropdown-item delete wiz-font-normal" href="#" id="delete">Delete</a>
+        </div>
+        <div id="noReminders" class="text-center" style="height:400px; margin-top:100px;">
+            <img id="imgLogo" src="logo.svg">
+            <div id="noRemindersText" class="mt-4 wiz-font-normal wiz-color-notify"></div>
+            <div id="addReminders" class="mt-2 wiz-font-normal wiz-color-notify"></div>
+        </div>
+        <script>
+            //init
+            var objApp = window.external;
+            var objWindow = objApp.Window;
+            var objCommon = objApp.CreateWizObject("WizKMControls.WizCommonUI");
+            var languageFileName = objApp.AppPath + "files\\reminders\\reminders.ini";  
+            var userGUID = objApp.GetUserGUID();
+            var isNightModeOn = objApp.ExecuteCommand("IsNightModeOn", null, null);
+            //
+            var wizas = decodeURIComponent(getUrlParam("asserver"));
+            var isAllReminders = Boolean(Number(getUrlParam("isallreminders")));
+
+            var objSettings = objApp.CreateWizObject("WizKMCore.WizSettings");
+            objSettings.Open(objApp.SettingsFileName);
+            var showFinishedReminders = objSettings.GetBoolValue(isAllReminders ? "AllReminders" : "DocumentReminders", "showFinishedReminders");
+
+            var objDatabase = objApp.Database;
+            var isGroup = false;
+            //
+            function setNightModeCss(){
+				if(isAllReminders)
+					return;
+				//
+                if(isNightModeOn){ 
+                    $('.unsave').remove();
+                    let elem = document.createElement('link');
+		            elem.type = "text/css";
+		            elem.href = "nightModeStyle.css";
+		            elem.rel = "stylesheet";
+                    elem.class = "unsave";
+		            document.head.appendChild(elem);
+               }
+            }
+            setNightModeCss();
+            //
+            $('#noReminders').hide();
+            //
+            if(isAllReminders){
+                $('#addReminder').hide();
+                $('#documentLabel').hide();
+            }else{
+                let objDocument = objWindow.CurrentDocument;
+                objDatabase = objDocument.Database;
+                isGroup = objDatabase.IsGroupDatabase;
+                //
+                $('#todayLabel').hide();
+                if(isGroup){
+                    $('#personal').hide();
+                    $('#group').hide();
+                }        
+            }     
+            //
+            var token = null;
+			var arrayReminderTask = [];
+            var arrayReminderRecord = [];
+            var contextMenuElem = null;
+            //
+            function getUrlParam(name) {
+	            let reg = new RegExp("[?&]" + name + "=([^?&]*)[&]?", "i");
+	            let match = location.search.match(reg);
+	            return match == null ? "" : match[1];
+	        }
+            //
+            objApp.LocalizeHtmlDocument2(languageFileName, WizChromeBrowser, function(){
+                getToken(initReminders);
+            });
+            //
+            function getToken(callback){
+                objWindow.GetToken(function(ret){
+                    token = ret;
+					if(callback){
+						callback();
+					}
+                });
+            }
+            function loadString(name){
+                return objCommon.LoadStringFromFile(languageFileName, name);
+            }
+            function clearReminders() {
+                arrayReminderTask = [];
+                arrayReminderRecord = [];
+                //
+                $('#reminderList').empty();
+                $('#noReminders').hide();
+            }
+            function getDocumentGuid(){
+                let objDocument = objWindow.CurrentDocument;
+                if(objDocument)
+                    return objDocument.GUID;
+                //
+                return "";
+            }
+            function getDocumentKbGuid(){
+                let objDocument = objWindow.CurrentDocument;
+                if(!objDocument)
+                return "";
+                //
+                let objDatabase = objDocument.Database;
+                if(!objDatabase)
+                return "";
+                //
+                return objDatabase.KbGUID;
+            }
+            function initReminders(){
+                clearReminders();
+
+                $.when($.ajax({
+                    url: wizas + "/a/remind/task?token=" + token,
+                    type: "GET",
+                    dataType: "json",
+                    success:function(json){
+                        if(json.return_code != 200){
+                            console.error(json.return_message);
+                            return;
+                        }
+                        let ret = json.result;
+                        let docGuid = "";
+                        for(let i = 0; i < ret.length; i++){
+                            var reminder = ret[i];
+                            if(reminder.status !== 0)
+                                continue;
+                            if(!isAllReminders){
+                                if(!docGuid){
+                                    docGuid = getDocumentGuid();
+                                }
+                                if(reminder.documentGuid !== docGuid)
+                                continue;
+                            }
+                            //
+                            arrayReminderTask.push(reminder);
+                        }
+                    },
+                    error: function(ret){
+                        console.error(ret);
+                    }
+                }
+                ), $.ajax({
+                    url: wizas + "/a/remind/record/status?token=" + token + '&page=1&size=100&count=0&status=' + (showFinishedReminders ? "" : "2"),
+                    type: "GET",
+                    dataType: "json",
+                    success: function(json){
+                        if(json.return_code != 200){
+                            console.error(json.return_message);
+                            return;
+                        }
+                        let ret = json.list;
+                        let docGuid = "";
+                        for(let i= 0; i < ret.length; i++){
+                            var reminder = ret[i];
+                            if(!isAllReminders){
+                                if(!docGuid){
+                                    docGuid = getDocumentGuid();
+                                }
+                                if(reminder.documentGuid !== docGuid)
+                                continue;
+                            }
+                            arrayReminderRecord.push(reminder);
+                        }
+                    },
+                    error: function(ret){
+                        console.error(ret);
+                    }
+                }
+                )).done(function(){
+                    addReminders();
+                });        
+            }
+            function addReminders(){
+                if(arrayReminderTask.length == 0 && arrayReminderRecord.length == 0){
+                    $('#noReminders').show();
+                    return;
+                }
+                //
+                arrayReminderTask.sort(compareReminderTask);
+                arrayReminderRecord.sort(compareReminderRecord);
+                //
+                if(isAllReminders){
+                    addAllReminders();
+                }else if(isGroup){
+                    addGroupReminders();
+                }else{
+                    addPersonalReminders();
+                }
+            }
+            function createLabel(parentElem, labelText, id){
+                if(!parentElem)
+                    return null;
+                let elem = document.createElement('label');
+                elem.id = id;
+                elem.classList.add('ml-3');
+                elem.classList.add('mt-2');
+                elem.classList.add('wiz-font-normal');
+                elem.classList.add('wiz-color-info');
+                elem.innerText = labelText;
+                parentElem.appendChild(elem);
+                return elem;
+            }
+            function createListGroup(parentElem, id){
+                if(!parentElem)
+                return null;
+                //
+                let elem = document.createElement('div');
+                elem.id = id;
+                elem.classList.add("list-group");
+                elem.classList.add("list-group-flush");
+                elem.classList.add("mx-2");
+                parentElem.appendChild(elem);
+                return elem;
+            }
+            function addAllReminders(){
+                let parentElem = document.getElementById('reminderList');
+                if(!parentElem)
+                    return;
+                //
+                let todayTaskCount = 0;
+                if(arrayReminderTask.length > 0){
+                    //
+                    createListGroup(parentElem, 'TodayReminders');
+                    createLabel(parentElem, loadString('Future Reminders'), 'future');
+                    createListGroup(parentElem, 'FutureReminders');
+                    //
+                    let today = new Date();
+                    for(let i = 0; i < arrayReminderTask.length; i++){
+                        //
+                        let task = arrayReminderTask[i];
+                        let tReminder = new Date(task.nextRemindTime);
+                        //
+                        if(tReminder.getFullYear() > today.getFullYear()
+                            || tReminder.getMonth() > today.getMonth()
+                            || tReminder.getDate() > today.getDate()){
+                            //
+                            let elem = document.getElementById('FutureReminders');
+                            if(!elem){
+                                return;
+                            }
+                            addReminderTwoLine(elem, task, true);
+                        }else{
+                            todayTaskCount++;
+                            let elem = document.getElementById('TodayReminders');
+                            if(!elem){
+                                return;
+                            }
+                            addReminderTwoLine(elem, task, true);
+                        }
+                    } 
+                    //
+                    if(todayTaskCount == 0){
+                        let elem = document.getElementById('TodayReminders');
+                        if(elem){
+                            elem.parentElement.removeChild(elem);
+                        }
+                    }
+                    if(arrayReminderTask.length == todayTaskCount){
+                        let elem = document.getElementById('future');
+                        if(elem){
+                            elem.parentElement.removeChild(elem);
+                        }
+                        elem = document.getElementById('FutureReminders');
+                        if(elem){
+                            elem.parentElement.removeChild(elem);
+                        }
+                    }
+                }
+                $('#todayLabel').text(function(){
+                    return loadString("Reminders Today") + " " + todayTaskCount;
+                })
+                //
+                if(arrayReminderRecord.length > 0){
+                    //
+                    createLabel(parentElem, loadString('Expired Reminders'), 'expired');
+                    createListGroup(parentElem, 'ExpiredReminders');
+                    if(showFinishedReminders){
+                        createLabel(parentElem, loadString('Finished Reminders'), 'finished');
+                        createListGroup(parentElem, 'FinishedReminders');
+                    }
+                    //
+                    let expiredCount = 0;
+                    for(let i = 0; i < arrayReminderRecord.length; i++){
+                        let record = arrayReminderRecord[i];
+                        
+                        if(2 === record.status){
+                            let elem = document.getElementById('ExpiredReminders');
+                            if(!elem){
+                                return;
+                            }
+                            //
+                            addReminderTwoLine(elem, record, true);
+                            expiredCount++;
+                        }else{
+                            if(showFinishedReminders){
+                                let elem = document.getElementById('FinishedReminders');
+                                if(!elem){
+                                    return;
+                                }
+                                addReminderTwoLine(elem, record, true);
+                            }
+                        }
+                    }
+                    //
+                    if(expiredCount == 0){
+                        let elem = document.getElementById('expired');
+                        if(elem){
+                            elem.parentElement.removeChild(elem);
+                        }
+                        elem = document.getElementById('ExpiredReminders');
+                        if(elem){
+                            elem.parentElement.removeChild(elem);
+                        }
+                    }
+                    if(expiredCount == arrayReminderRecord.length){
+                        let elem = document.getElementById('finished');
+                        if(elem){
+                            elem.parentElement.removeChild(elem);
+                        }
+                        elem = document.getElementById('FinishedReminders');
+                        if(elem){
+                            elem.parentElement.removeChild(elem);
+                        }
+                    }
+                }
+            }
+            function addGroupReminders(){
+                let parentElem = document.getElementById('reminderList');
+                if(!parentElem)
+                return;
+                //
+                let arrayFromMe = [];
+                let arrayToMe = [];
+                for(let i = 0; i < arrayReminderTask.length; i++){
+                    let task = arrayReminderTask[i];
+                    if(task.creatorGuid === userGUID){
+                        arrayFromMe.push(task);
+                    }
+                    if(task.receiverGuid === "all"){
+                        arrayToMe.push(task);
+                    }else{
+                        let arrayReciverGuid = task.receiverGuid.split(',');
+                        if($.inArray(userGUID, arrayReciverGuid) !== -1){
+                            arrayToMe.push(task);
+                        }
+                    }  
+                }
+                for(let i = 0; i < arrayReminderRecord.length; i++){
+                    let record = arrayReminderRecord[i];
+                    if(!showFinishedReminders && record.status === 1)
+                    continue;
+
+                    if(record.creatorGuid === userGUID){
+                        arrayFromMe.push(record);
+                    }
+                    if(record.receiverGuid === "all"){
+                        arrayToMe.push(record);
+                    }else{
+                        let arrayReciverGuid = record.receiverGuid.split(',');
+                        if($.inArray(userGUID, arrayReciverGuid) >= 0){
+                            arrayToMe.push(record);
+                        }
+                    }
+                }
+                //
+                let labelToMe = createLabel(parentElem, loadString('My Reminding'));
+                let elemToMe= createListGroup(parentElem, 'RemindersToMe');
+                if(!elemToMe)
+                    return;
+                for(let i = 0; i < arrayToMe.length; i++){
+                    addReminderTwoLine(elemToMe, arrayToMe[i], true);
+                }
+                //
+                let labelFromMe = createLabel(parentElem, loadString('Reminders setted up by me'));
+                let elemFromMe = createListGroup(parentElem, 'RemindersFromMe');
+                if(!elemFromMe)
+                    return;
+                for(let i = 0; i < arrayFromMe.length; i++){
+                    addReminderTwoLine(elemFromMe, arrayFromMe[i], false);
+                }
+            }
+            function addPersonalReminders(){
+                let parentElem = document.getElementById('reminderList');
+                if(!parentElem)
+                return;
+                //
+                let elem = createListGroup(parentElem, "PersonalDocumentReminders");
+                if(!elem)
+                return;
+                //
+                for(let i = 0; i < arrayReminderTask.length; i++){
+                    addReminderOneLine(elem, arrayReminderTask[i]);
+                }
+                for(let i = 0; i < arrayReminderRecord.length; i++){
+                    let record = arrayReminderRecord[i];
+                    if(!showFinishedReminders && record.status === 1)
+                    break;
+                    //
+                    addReminderOneLine(elem, record);
+                }
+            }
+            function compareReminderTask(r1, r2){
+                return r1.nextRemindTime > r2.nextRemindTime ? -1 : 1;
+            }
+            function compareReminderRecord(r1, r2){
+                if(r1.status === r2.status){
+                    return r1.remindTime > r2.remindTime ? -1 : 1;
+                }else{
+                    if(1 === r1.status)
+                    return 1;
+                    else if(1 === r2.status)
+                    return -1;
+                    else
+                    return 0;
+                }
+            }
+            function getReminderInfo(reminder){
+                let remindTime = (0 === reminder.status) ? reminder.nextRemindTime : reminder.remindTime;
+                let date = new Date(remindTime);
+                let month = ('0' + (date.getMonth() + 1)).slice(-2);
+                let day = ('0' + date.getDate()).slice(-2);
+                let hours = ('0' + date.getHours()).slice(-2);
+                let minutes = ('0' + date.getMinutes()).slice(-2);
+                let text = month + "-" + day + " " + hours + ":" + minutes;
+                if(0 == reminder.status)
+                {
+                    text += " " + loadString(reminder.repeatType);
+                }
+                //
+                return text;
+            }
+            function addReminderTwoLine(parentElem, reminder, isToMe){
+                if(!parentElem)
+                    return;
+                //
+                if(!reminder.documentTitle)
+                    return;
+                //
+                let elem = document.createElement("div");
+                elem.id = reminder.id;
+                elem.classList.add("list-group-item");
+                elem.classList.add("list-group-item-action");
+                elem.classList.add("wiz-list-item");
+                elem.classList.add("wiz-font-normal");
+                elem.classList.add('wiz-color-text');
+                elem.dataset.status = reminder.status;
+                if(reminder.status > 0){
+                    elem.dataset.taskid = reminder.taskId;
+                }
+                if(isAllReminders){
+                    elem.dataset.kbguid = reminder.kbGuid;
+                    elem.dataset.docguid = reminder.documentGuid;
+                }
+                parentElem.appendChild(elem);
+                //
+                let sonElem1 = document.createElement("div");
+                sonElem1.classList.add("custom-control");
+                sonElem1.classList.add("custom-checkbox");
+                sonElem1.classList.add("d-inline");
+                elem.appendChild(sonElem1);
+
+                let grandSonElem11 = document.createElement("input");
+                grandSonElem11.type = "checkbox";
+                grandSonElem11.id = reminder.id;
+                grandSonElem11.classList.add("custom-control-input");
+                //grandSonElem11.classList.add("align-middle")
+                //grandSonElem11.classList.add("mr-2");
+                if(reminder.status & 1){
+                    grandSonElem11.checked = true;
+                }
+                sonElem1.appendChild(grandSonElem11);   
+
+                let grandSonElem12 = document.createElement("label");  
+                grandSonElem12.setAttribute("for", reminder.id);
+                grandSonElem12.classList.add("custom-control-label");
+                grandSonElem12.classList.add("d-inline-flex");
+                grandSonElem12.classList.add('flex-column');
+                sonElem1.appendChild(grandSonElem12);
+
+                let label = document.createElement("div");
+                grandSonElem12.appendChild(label);
+
+                let label1 = document.createElement("div");
+                label1.classList.add("text-nowrap");
+                label1.classList.add("text-truncate");
+                label1.style.maxWidth = "300px";
+                label1.innerText = getReminderLabelLine1(reminder, isToMe);
+                label.appendChild(label1);
+
+                let label2 = document.createElement("div");
+                label2.classList.add("text-nowrap");
+                label2.classList.add("text-truncate");
+                label2.style.maxWidth = "300px";
+                label1.style.lineHeight = 1;
+                label.appendChild(label2);
+
+                let smallLabel2 = document.createElement("small");
+                smallLabel2.innerText = getReminderInfo(reminder);
+                smallLabel2.classList.add("wiz-font-small");
+                if(2 === reminder.status){
+                    smallLabel2.classList.add("wiz-color-warning");
+                }
+                label2.appendChild(smallLabel2);
+            }
+            function addReminderOneLine(parentElem, reminder) {
+                if(!parentElem)
+                return;
+                //
+                if(!reminder.documentTitle)
+                return;
+                //
+                let elem = document.createElement("div");
+                elem.id = reminder.id;
+                elem.classList.add("list-group-item");
+                elem.classList.add("list-group-item-action");
+                elem.dataset.status = reminder.status;
+                if(reminder.status > 0){
+                    elem.dataset.taskid = reminder.taskId;
+                }
+                parentElem.appendChild(elem);
+
+                let sonElem1 = document.createElement("div");
+                sonElem1.classList.add("custom-control");
+                sonElem1.classList.add("custom-checkbox");
+                sonElem1.classList.add("d-inline");
+                elem.appendChild(sonElem1);
+
+                let grandSonElem11 = document.createElement("input");
+                grandSonElem11.id = reminder.id;
+                grandSonElem11.type = "checkbox";
+                grandSonElem11.classList.add("custom-control-input");
+                if(1 === reminder.status){
+                    grandSonElem11.checked = true;
+                }
+                sonElem1.appendChild(grandSonElem11);
+
+                let grandSonElem12 = document.createElement("label");
+                grandSonElem12.setAttribute("for", reminder.id);
+                grandSonElem12.classList.add("custom-control-label");
+                grandSonElem12.classList.add("d-inline-flex");
+                grandSonElem12.classList.add("flex-column");
+                sonElem1.appendChild(grandSonElem12);
+
+                let label = document.createElement("div");
+                label.classList.add("text-nowrap");
+                label.classList.add("text-truncate");
+                label.classList.add("wiz-font-normal");
+                label.style = "maxWidth:300px; lineHeight:1; margin-top:.2rem;";
+                if(1 == reminder.status){
+                    grandSonElem12.classList.add("wiz-color-text");
+                }else if (2 === reminder.status) {
+                    grandSonElem12.classList.add("wiz-color-warning");
+                }else{
+                    grandSonElem12.classList.add('wiz-color-hint');
+                }
+                label.innerText = getReminderLabelLine1(reminder, false);
+                grandSonElem12.appendChild(label);                                    
+            }
+            function getReminderLabelLine1(reminder, isToMe){
+                if(isAllReminders){
+                    return reminder.documentTitle;
+                }
+                else if(isGroup){
+                    let text = "";
+                    if(isToMe){
+                        text += objApp.GetAliasByUserGUID(reminder.creatorGuid);
+                    }
+                    else{
+                        if(reminder.receiverGuid == "all"){
+                            text = loadString("all");
+                        }else{
+                            let arrayReciverGuid = reminder.receiverGuid.split(','); 
+                            for(let i = 0; i < arrayReciverGuid.length; i++){
+                                text += objApp.GetAliasByUserGUID(arrayReciverGuid[i]);
+                                text += ' ';
+                            }
+                        }
+                    }
+                    return text;
+                }
+                else{
+                    return getReminderInfo(reminder);
+                }
+            }
+            //
+            
+           $(document).ready(function(){
+                $('#contextMenu').hide();
+                $("#addReminder").on("click", function(){
+                    addNewReminder();
+                });
+                $(document).on('contextmenu', "div.list-group-item", function(e){
+                    if(e.button == 2){
+                        let menu = $('#contextMenu');
+                        //
+                        let pageWidth = $(document).width();
+                        let menuWidth = menu.width();
+                        let left = (e.clientX + menuWidth > pageWidth) ? (pageWidth - menuWidth - 5) : e.clientX; 
+                        let top = $(document.body).scrollTop() + e.clientY;
+                        //
+                        menu.css("left", left + "px");
+                        menu.css("top", top + "px");
+                        menu.show();
+                        //
+                        contextMenuElem = e.target.closest("div.list-group-item");
+                        //
+                        return false;
+                    }
+                });
+                $(document).on('click', function(e){
+                    
+                    $('#contextMenu').hide();
+                    contextMenuElem = null;
+                });
+                $(document).on("click", ".edit", function(e){
+                    if(!contextMenuElem)
+                        return;
+                    //
+                    e.preventDefault();
+                    //
+                    let status = contextMenuElem.dataset.status;
+                    status = Number(status);
+                    if(1 === status){
+                        objCommon.ShowMessage("Fininshed reminder can not be edited", "document reminder", 0);
+                    }else if(2 === status){
+                        objCommon.ShowMessage("Over-due reminder can not be edited", "document reminder", 0);
+                    }else{
+                        let id = contextMenuElem.getAttribute('id');
+                        editReminderTask(id);
+                    }
+                });
+                $(document).on("click", ".delete", function(e){
+                    if(!contextMenuElem)
+                        return;
+                    //
+                    e.preventDefault();
+                    //
+                    let id = contextMenuElem.getAttribute('id');
+                    let status = contextMenuElem.dataset.status;
+                    deleteReminder(id, status);
+                });
+                $(document.body).on("click", ".custom-checkbox", function(e){
+                    e.stopPropagation();
+                    //
+                    let checked = $(this).children(".custom-control-input").prop("checked");
+                    let elem = $(this).parents("div.list-group-item");
+                    if(!elem)
+                        return;
+                    let status = elem.data('status');
+                    if(1 === status){
+                        let taskId = elem.data('taskid');
+                        for(let i = 0; i < arrayReminderTask.length; i++){
+                            let task = arrayReminderTask[i];
+                            if(task.id === taskId && task.status === 2){
+                                objCommon.ShowMessage("Over-due reminder can not be edited", "document reminder", 0);
+                                return;
+                            }
+                        }
+                    }
+                    let id = elem.attr("id");
+                    finishReminder(!checked, Number(id), Number(status));
+                });
+
+                showFinishedReminders = objSettings.GetBoolValue(isAllReminders ? "AllReminders" : "DocumentReminders", "showFinishedReminders");
+                $('#showFinishedReminders').text(showFinishedReminders ? loadString("HideFinishedReminders") : loadString("ShowFinishedReminders"));
+
+                $('#showFinishedReminders').on('click', function(){
+                    showFinishedReminders = !showFinishedReminders;
+                    objSettings.SetBoolValue(isAllReminders ? "AllReminders" : "DocumentReminders", "showFinishedReminders", showFinishedReminders);
+                    objSettings.Save();
+                    $(this).text(function(){
+                        return showFinishedReminders ? loadString("HideFinishedReminders") : loadString("ShowFinishedReminders");
+                    });
+                    initReminders();
+                });
+                $(document).on('click', "div.list-group-item", function(){
+                    if(!isAllReminders)
+                        return;
+                    //
+                    let kbGuid = $(this).data('kbguid');
+                    let docGuid = $(this).data('docguid');
+                    objApp.ExecuteCommand("ViewDocument", kbGuid, docGuid);
+                });
+           });
+            function getReminderTask(id){
+                let index = arrayReminderTask.findIndex(function(value, index, obj){
+                    return value.id === id;
+                });
+                if(-1 === index){
+                    return null;
+                }
+                else{
+                    return arrayReminderTask[index];
+                }
+            }
+            function addNewReminder(){
+                let params = {
+                    "wizAs": wizas,
+                    "docGuid": getDocumentGuid(),
+                    "kbGuid": getDocumentKbGuid(),
+                    "isEditTask": false
+                };
+                objWindow.ShowHtmlDialogEx(false, "", objApp.AppPath + "files\\reminders\\edit_reminder.html", 500, 400, "", JSON.stringify(params), function(ret){
+                    if(ret == 1){
+                        initReminders();
+                    }    
+                });
+            }
+            function editReminderTask(id){
+                let receiversGuids = "";
+                for(let i = 0; i < arrayReminderTask.length; i++){
+                    if(id === arrayReminderTask[i].id){
+                        receiverGuids = arrayReminderTask[i].receiverGuid;
+                        break;
+                    }
+                }
+                let params = {
+                    "wizAs": wizas, 
+                    "docGuid": getDocumentGuid(),
+                    "kbGuid": getDocumentKbGuid(),
+                    "isEditTask": true,
+                    "task": getReminderTask(Number(id))
+                };
+                objWindow.ShowHtmlDialogEx(false, "", objApp.AppPath + "files\\reminders\\edit_reminder.html", 500, 400, "", JSON.stringify(params), function(ret){
+                    if(ret == 1)
+                    {
+                        initReminders();
+                    }
+                });
+            }
+            function deleteReminder(id, status) {
+                let delUrl = wizas + "/a/remind";
+                if(0 == status){
+                    delUrl += "/task/" + id + "?token=" + token;
+                }else{
+                    delUrl += "/record/" + id + "?token=" + token;
+                }
+                $.ajax({
+                    url: delUrl,
+                    type: "DELETE",
+                    dataType: "json",
+                    success: function (json) {
+                        if (json.return_code !== 200) {
+                            console.error("failed to delete reminder" + id);
+                        }
+                        //
+                        initReminders();
+                    },
+                    error: function (ret) {
+                        console.error(ret);
+                    }
+                });
+            }
+            function finishReminder(finish, id, status){
+                if(0 === status){
+                    let index = arrayReminderTask.findIndex(function(value, index, arr){
+                        return id === value.id;
+                    });
+                    if(-1 === index){
+                        return;
+                    }
+                    let reminder = arrayReminderTask[index];
+                    //
+                    let url = wizas + '/a/remind/task/' + id + "?token=" + token + "&status=" + (finish ? "1" : "0")
+                                + "&receiver_guid=" + reminder.receiverGuid + "&priority=" + reminder.priority;
+                    $.ajax({
+                        url: url,
+                        type: "PUT",
+                        dataType: "json",
+                        success: function(json){
+                            console.log(json);
+                            if(json.return_code !== 200){
+                                objCommon.ShowMessage(json.return_message, "document reminder", 0);
+                                return;
+                            }
+                            //
+                            initReminders();
+                        },
+                        error: function(ret){
+                            console.error(ret);
+                        }
+                    });
+                }else{
+                    $.ajax({
+                        url: wizas + '/a/remind/record/' + id + "?token=" + token + "&status=" + (finish ? "1" : "0"),
+                        type: "PUT",
+                        dataType: "json",
+                        success: function(json){
+                            if(json.return_code !== 200){
+                                objCommon.ShowMessage(json.return_message, "document reminder", 0);
+                                return;
+                            }
+                            //
+                            initReminders();
+                        },
+                        error: function(ret){
+                            console.error(ret);
+                        }
+                    });
+                }
+            }
+        </script>
+    </body>
+</html>

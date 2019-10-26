@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="../js/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../js/bootstrap/css/bootstrap-multiselect.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="../js/jquery-3.3.1.min.js"></script>
+    <script src="../js/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/bootstrap/js/bootstrap.min.js"></script>
+    <script src="../js/bootstrap/js/bootstrap-multiselect.js"></script>
+    <style>
+        html, body{
+            font-family: 'Microsoft YaHei', Tahoma, Helvetica, Arial, "\5b8b\4f53", sans-serif;
+            }
+            .multiselect-container{
+                width: inherit;
+            }
+            .multiselect-container>li>a{
+                color:black;
+            }
+            .multiselect-container>li>a>label>input[type=checkbox]{
+                margin-bottom: 5px;
+                margin-right: 8px;
+            }
+            .dropdown-toggle::after{
+                align-self: center;
+            }
+            button.wiz-control{
+                height: calc(2.25rem + 2px);
+            }
+            .form-check-input{
+                margin-top: .2rem;
+            }
+            .wiz-font-normal{
+                font-size: 14px;
+            }
+            .wiz-font-small{
+                font-size: 12px;
+            }
+            .wiz-color-text{
+                color:#3e4349;
+            }
+            .wiz-color-info{
+                color:#9ea7b4;
+            }
+        </style>
+</head>
+
+<body>
+    <div id='addReminder' class="mb-2 mx-3 wiz-font-normal wiz-color-info">Add Reminder</div>
+    <div class="mx-3 flex-column">
+        <form>
+            <div class="form-group">
+                <label for="selectReceivers" id="labelReceivers" class="d-none wiz-font-small wiz-color-info">Receivers</label>
+                <select class="form-control d-none" id="selectReceivers"></select>
+            </div>
+            <div id="collpaseButton" class="form-check d-none mb-2" data-toggle="collapse" href="#collapseDateTime"
+                role="button" aria-expanded="false" aria-controls="collapseDateTime">
+                <input type="checkbox" id="checkRemind" class="form-check-input" />
+                <label id="labelRemind" class="form-check-label  wiz-font-small wiz-color-text d-flex align-items-center" for="checkRemind">
+                    Remind others on appointed date
+                </label>
+            </div>
+            <div class="collapse" id="collapseDateTime">
+                <div class="form-row">
+                    <div class="form-group col-6">
+                        <label for="inputDate" id="labelDate" class=" wiz-font-small wiz-color-info">Date</label>
+                        <input type="date" class="form-control wiz-font-normal" id="inputDate" aria-describedby="dateHelp">
+                    </div>
+                    <div class="form-group">
+                        <label for="inputTime" id="labelTime" class=" wiz-font-small wiz-color-info">Time</label>
+                        <input type="time" class="form-control wiz-font-normal" id="inputTime" aria-describedby="timeHelp">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-6">
+                        <label for="selectRepeatOption" id="labelRepeatOption" class=" wiz-font-small wiz-color-info">Repeat Option</label>
+                        <select class="form-control wiz-font-normal wiz-color-text" id="selectRepeatOption">
+                            <option id="none" value="none" selected class="wiz-font-normal">None</option>
+                            <option id="everyday" value="day" class="wiz-font-normal">Everyday</option>
+                            <option id="weekly" value="week" class="wiz-font-normal">Weekly</option>
+                            <option id="monthly" value="month" class="wiz-font-normal">Monthly</option>
+                            <option id="annually" value="year" class="wiz-font-normal">Annually</option>
+                        </select>
+                    </div>
+                    <div class="d-flex align-items-end ml-1 mb-2">
+                        <p id="reminderShow" class="wiz-font-small"></p>
+                    </div>
+                </div>      
+            </div>
+            <div class="d-none"><small id="collpaseNotify" class="wiz-font-normal wiz-color-info">If you do not choose to remind other group members on the appointed date, they will receive the remind message immediately.</small></div>
+            <div class="form-group float-right">
+                <button type="button" id="cancel" class="btn btn-secondary mr-2 wiz-font-normal">Cancel</button>
+                <button type="button" id="save" class="btn btn-primary wiz-font-normal">Save</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        let token = "";
+        external.Window.GetToken(function (ret) {
+            token = ret;
+        });
+        let params = external.Window.GetHtmlDialogParam(WizChromeBrowser);
+        var objCommon = external.CreateWizObject("WizKMControls.WizCommonUI");
+		let languageFileName = external.AppPath + "files\\reminders\\reminders.ini";
+        let wizAs = "";
+        let kbGuid = "";
+        let docGuid = "";
+        let isEditTask = false;
+        let selectAll = false;
+        let specifyDate = false;
+        if (params) {
+            let json = JSON.parse(params);
+            wizAs = json.wizAs;
+            kbGuid = json.kbGuid;
+            docGuid = json.docGuid;
+            isEditTask = Boolean(json.isEditTask);
+        }
+        //
+        if (!kbGuid) {
+            $('#collapseDateTime').collapse('show');
+        } else {
+            $('#collpaseButton').removeClass('d-none');
+            $('#collpaseNotify').removeClass('d-none');
+        }
+        //
+        let taskRemindTime = getTaskNextRemindTime();
+        if (!taskRemindTime) {
+            taskRemindTime = new Date();
+        }
+        let day = ('0' + taskRemindTime.getDate()).slice(-2);
+        let month = ('0' + (taskRemindTime.getMonth() + 1)).slice(-2);
+        let remindDate = taskRemindTime.getFullYear() + '-' + month + '-' + day;
+        $('#inputDate').val(remindDate);
+
+        let hours = ('0' + taskRemindTime.getHours()).slice(-2);
+        let minutes = ('0' + taskRemindTime.getMinutes()).slice(-2);
+        let remindTime = hours + ':' + minutes;
+        $('#inputTime').val(remindTime);
+        //
+        function loadString(name) {
+            return objCommon.LoadStringFromFile(languageFileName, name);
+        }
+
+        function getTaskId() {
+            if (!params) {
+                return -1;
+            }
+            let json = JSON.parse(params);
+            let task = json.task;
+            if (!task) {
+                return -1;
+            }
+            return task.id;
+        }
+
+        function getTaskReceiverGuids() {
+            if (!params) {
+                return "";
+            }
+            let json = JSON.parse(params);
+            let task = json.task;
+            if (!task) {
+                return "";
+            }
+            return task.receiverGuid;
+        }
+
+        function getTaskNextRemindTime() {
+            if (!params) {
+                return null;
+            }
+            let json = JSON.parse(params);
+            let task = json.task;
+            if (!task) {
+                return null;
+            }
+            //
+            return new Date(task.nextRemindTime);
+        }
+        //
+        function initReceiver() {
+            let arrayReceiverGuid = [];
+            let isSelectAll = false;
+            if (isEditTask) {
+                let receiverGuids = getTaskReceiverGuids();
+                if (receiverGuids === "all") {
+                    isSelectAll = true;
+                } else {
+                    arrayReceiverGuid = receiverGuids.split(',');
+                }
+            } else {
+                arrayReceiverGuid.push(external.GetUserGUID());
+            }
+            //
+            let objDatabase = external.PersonalDatabase;
+            let objUsers = objDatabase.GetBizGroupUsers(kbGuid, 0);
+            //
+            let datas = [];
+            for (let i = 0; i < objUsers.Count; i++) {
+                let user = objUsers.Item(i);
+                let alias = user.Alias;
+                let avatarFileName = objDatabase.GetAvatarFileNameByUserID(user.UserID);
+                //
+                let selected = false;
+                if (isSelectAll) {
+                    selected = true;
+                } else {
+                    selected = arrayReceiverGuid.find((value, index, obj) => {
+                        return value === user.UserGUID;
+                    });
+                }
+                //
+                let data = {
+                    "label": '<img src=" ' + avatarFileName +
+                        ' " class="rounded-circle" style="width:25px; height:25px; margin-bottom: 2px; margin-right:8px;"> ' +
+                        alias + '',
+                    "value": user.UserGUID,
+                    "title": alias,
+                    "selected": selected,
+                    "attributes": {
+                        "userGuid": user.UserGUID
+                    }
+                }
+                datas.push(data);
+            }
+            datas.sort(function (a, b) {
+                return a.title.localeCompare(b.title);
+            })
+            $('#selectReceivers').multiselect('dataprovider', datas);
+            //
+        }
+        //
+
+        $(document).ready(function () {
+            refreshResult();
+            $("#save").on('click', function () {
+                if (isEditTask) {
+                    editTask();
+                } else {
+                    createNewTask();
+                }
+
+            });
+
+            $("#collpaseButton").on('click', function () {
+                specifyDate = !specifyDate;
+            });
+
+            if (!kbGuid) {
+                $('#collapseDateTime').collapse('show');
+            } else {
+                $('#labelReceivers').removeClass('d-none');
+                $('#selectReceivers').removeClass('d-none');
+                $("#selectReceivers").attr("multiple", "multiple");
+
+                $("#selectReceivers").multiselect({
+                    enableFiltering: true,
+                    enableCaseInsensitiveFiltering: true,
+                    includeSelectAllOption: true,
+                    buttonWidth: '100%',
+                    enableHTML: true,
+                    maxHeight: 200,
+                    templates: {
+                        filter: '<li class="multiselect-item multiselect-filter"><div class="input-group d-flex align-items-center justify-content-between"><span class="input-group-addon"><img src="search.svg"></span><input class="form-control multiselect-search" type="text" style="height:30px;"/></div></li>',
+                        filterClearBtn: '<span class="input-group-btn"><button class="close multiselect-clear-filter mr-2 ml-1" type="button" aria-label="Close" style="width:32px; height:32px"><span aria-hidden="true">&times;</span></button></span>'
+                    },
+                    buttonClass: "form-control wiz-control d-flex justify-content-between",
+                    selectAllText: "All",
+                    buttonTitle: function (options, select) {
+                        if (options.length === 0) {
+                            return "None selected";
+                        } else {
+                            var label = [];
+                            options.each(function () {
+                                if ($(this).attr('title')) {
+                                    label.push($(this).attr('title'));
+                                }
+                            })
+                            return label.join(',') + '';
+                        }
+                    },
+                    buttonText: function (options, select) {
+                        if (0 === options.length) {
+                            return "";
+                        } else if (this.allSelectedText &&
+                            options.length === $('option', $(select)).length &&
+                            $('option', $(select)).length !== 1 &&
+                            this.multiple) {
+                            return "All";
+                        } else {
+                            let label = [];
+                            options.each(function () {
+                                if ($(this).attr("title")) {
+                                    label.push($(this).attr("title"));
+                                }
+                                if (label.length > 5) {
+                                    return false;
+                                }
+                            });
+                            return label.join(',') + " ";
+                        }
+                    },
+                    onSelectAll: function () {
+                        selectAll = true;
+                    },
+                    onDeslectAll: function () {
+                        selectAll = false;
+                    }
+                });
+                initReceiver();
+            }
+        });
+
+        function getReceiverGuids() {
+            if (!kbGuid) {
+                return external.GetUserGUID();
+            }
+            if (selectAll) {
+                return "all";
+            } else {
+
+                let count = $('#selectReceivers option:selected').length;
+                if (count === $('#selectReceivers option').length) {
+                    return "all";
+                }
+                //
+                let guids = [];
+                for (let i = 0; i < count; i++) {
+                    let objSelect = $("#selectReceivers option:selected:eq('" + (count - i - 1) + "')");
+                    guids.push(objSelect.attr('data-userguid'));
+                }
+                return guids.join(',');
+            }
+        }
+
+        function getRepeatType() {
+            return $('#selectRepeatOption option:selected').val();
+        }
+
+        function getRemindMonth() {
+            let repeatType = getRepeatType();
+            if ("year" === repeatType) {
+                let date = new Date($('#inputDate').val().replace(/-/g, '/'));
+                let month = ('0' + (date.getMonth() + 1)).slice(-2);
+                return month;
+            } else {
+                return 0;
+            }
+        }
+
+        function getRemindDay() {
+            let repeatType = getRepeatType();
+            let date = new Date($('#inputDate').val().replace(/-/g, '/'));
+            let day = 0;
+            if ("week" === repeatType) {
+                let dayOfWeek = date.getDay();
+                if(0 == dayOfWeek){
+                    dayOfWeek = 7;
+                }
+                day = ('0' + dayOfWeek).slice(-2);
+            } else if ("month" === repeatType || "year" === repeatType) {
+                day = ('0' + date.getDate()).slice(-2);
+            }
+            //
+            return day;
+        }
+
+        function getRemindTime() {
+            if (kbGuid && !specifyDate) {
+                let now = new Date();
+                let year = now.getFullYear();
+                let month = ('0' + (now.getMonth() + 1)).slice(-2);
+                let day = ('0' + now.getDate()).slice(-2);
+                let hours = ('0' + now.getHours()).slice(-2);
+                let minutes = ('0' + now.getMinutes()).slice(-2);
+                let seconds = ('0' + now.getSeconds()).slice(-2);
+                return '{0}-{1}-{2} {3}:{4}:{5}'.format(year, month, day, hours, minutes, seconds);
+
+            } else {
+                let date = new Date($('#inputDate').val().replace(/-/g, '/'));
+                let year = date.getFullYear();
+                let month = ('0' + (date.getMonth() + 1)).slice(-2);
+                let day = ('0' + date.getDate()).slice(-2);
+
+                let time = $('#inputTime').val();
+                let arrayTime = time.split(':');
+                let hours = ('0' + arrayTime[0]).slice(-2);
+                let minutes = ('0' + arrayTime[1]).slice(-2);
+                let seconds = ('0' + arrayTime[1]).slice(-2);
+                //
+                let repeatType = getRepeatType();
+                if ("none" === repeatType) {
+                    return '{0}-{1}-{2} {3}:{4}:{5}'.format(year, month, day, hours, minutes, seconds);
+                } else {
+                    return "{0}:{1}:{2}".format(hours, minutes,seconds);
+                }
+            }
+        }
+
+        function getGroupGuid() {
+            if (kbGuid) {
+                return kbGuid;
+            } else {
+                let objDatabase = external.PersonalDatabase;
+                if (!objDatabase) {
+                    return "";
+                }
+                //
+                return objDatabase.GetMeta('server_info', "kb_guid");;
+            }
+        }
+
+        function createNewTask() {
+            let groupGuid = getGroupGuid();
+            let receiverGuids = getReceiverGuids();
+            let repeatType = getRepeatType();
+            let repeatMonth = getRemindMonth();
+            let repeatDay = getRemindDay();
+            let repeatTime = getRemindTime();
+            let urlParams =
+                "token={0}&kb_guid={1}&document_guid={2}&receiver_guids={3}&repeat_type={4}&remind_month={5}&remind_day={6}&remind_time={7}&priority=0";
+            let url = wizAs + '/a/remind/task?' + urlParams.format(token, groupGuid, docGuid, receiverGuids, repeatType,
+                repeatMonth, repeatDay, repeatTime);
+            $.ajax({
+                url: url,
+                type: "POST",
+                dataType: "json",
+                success: function (json) {
+                    if (json.return_code !== 200) {
+                        console.error(json.return_message);
+                        return;
+                    }
+                    external.Window.CloseHtmlDialog(WizChromeBrowser, 1);
+                },
+                error: function (json) {
+                    console.error(json);
+                }
+            });
+        }
+
+        function editTask() {
+            let taskId = getTaskId();
+            if (taskId <= 0)
+                return;
+            //
+            $.ajax({
+                url: wizAs + "/a/remind/task/" + taskId + "?token=" + token,
+                type: "DELETE",
+                dataType: "json",
+                success: function (ret) {
+                    if (ret.return_code !== 200) {
+                        console.error(ret.return_message);
+                        return;
+                    }
+                    createNewTask();
+                },
+                error: function (ret) {
+                    console.error(ret);
+                }
+            })
+        }
+        String.prototype.format = function (args) {
+            var result = this;
+            if (arguments.length > 0) {
+                if (arguments.length == 1 && typeof (args) == "object") {
+                    for (var key in args) {
+                        if (args[key] !== undefined) {
+                            var reg = new RegExp("({" + key + "})", "g");
+                            result = result.replace(reg, args[key]);
+                        }
+                    }
+                } else {
+                    for (var i = 0; i < arguments.length; i++) {
+                        if (arguments[i] !== undefined) {
+                            var reg2 = new RegExp("({)" + i + "(})", "g");
+                            result = result.replace(reg2, arguments[i]);
+                        }
+                    }
+                }
+            }
+            return result;
+        }
+        $(window).on('load', function(){
+            external.LocalizeHtmlDocument(languageFileName, WizChromeBrowser);
+        });
+
+        let arrayWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thusday", "Friday", "Saturday"];
+        function refreshResult(){
+            $('#reminderShow').text(function(){
+                //
+                let date = new Date($('#inputDate').val().replace(/-/g, '/'));
+                let year = date.getFullYear();
+                let month = ('0' + (date.getMonth() + 1)).slice(-2);
+                let day = ('0' + date.getDate()).slice(-2);
+
+                let time = $('#inputTime').val();
+                let arrayTime = time.split(':');
+                let hours = ('0' + arrayTime[0]).slice(-2);
+                let minutes = ('0' + arrayTime[1]).slice(-2);
+                //
+                let repeatType = getRepeatType();
+                let repeatTypeId = $('#selectRepeatOption option:selected').attr('id');
+                let repeatText = loadString(repeatTypeId);
+                //
+                if("day" === repeatType){
+                    return "{0}:{1}".format(hours, minutes) + " " + repeatText;
+
+                }else if("week" === repeatType){
+                    let dayOfWeek = arrayWeek[date.getDay()];
+                    return "{0}:{1}".format(hours, minutes) + " " + loadString(dayOfWeek) + " " + repeatText;
+
+                }else if("month" === repeatType){
+                    return "{0},{1}:{2}".format(day, hours, minutes) + " " + repeatText;
+
+                }else if("year" == repeatType){
+                    return "{0}-{1} {2}:{3}".format(month, day, hours, minutes) + " " + repeatText;
+                }else{
+                    return "{0}-{1}-{2} {3}:{4}".format(year, month, day, hours, minutes) + " " + repeatText;
+                }
+            });
+        }
+        $('#inputDate').on('change', function(){
+            refreshResult();
+        });
+        $('#inputTime').on('change', function(){
+            refreshResult();
+        });
+        $('#selectRepeatOption').on('change', function(){
+            refreshResult();
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,326 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Format Text</title>
+    <style type="text/css">
+         html
+        {
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        body
+        {
+            font-family: "Microsoft YaHei", Georgia, Helvetica, Arial, sans-serif, 宋体, serif, PMingLiU;
+            color: black;
+            background-color: #fff;
+            font-size: 9pt;
+            margin: 1em;
+            line-height: 1.5;
+        }
+        div
+        {
+            font-size: 1em;
+        }
+        table
+        {
+            empty-cells: show;
+        }
+        font
+        {
+            font-size: 1em;
+        }
+        ul
+        {
+            padding: 0 0 1em 1em;
+        }
+        ol
+        {
+            padding: 0 0 1em 1.3em;
+        }
+        li
+        {
+            line-height: 1.5em;
+            padding: 0 0 0 0;
+        }
+        p
+        {
+            padding: 0;
+        }
+        h1, h2, h3, h4, h5
+        {
+            padding: 0;
+        }
+        h1
+        {
+            font-size: 1.3em; /*1.3em*/
+        }
+        h2
+        {
+            font-size: 1.1em; /*1.3em*/
+        }
+        h3
+        {
+            font-size: 1em; /*1.1em;*/ ;line-height:1.4em;white-space:nowrap;padding:0;}
+        h4, h5, table
+        {
+            font-size: 1em;
+        }
+        sup, sub
+        {
+            font-size: .7em;
+        }
+        input, select, textarea, option
+        {
+            font-family: inherit;
+            font-size: inherit;
+        }
+        input[type='checkbox'], input[type='radio'] {
+            width: 12px;
+            height: 12px;
+        }
+        img
+        {
+            border-style: none;
+        }
+        a
+        {
+            outline: none;
+            color: #00c;
+        }
+        a:active
+        {
+            color: red;
+        }
+        a:visited
+        {
+            color: #551a8b;
+        }
+        hr
+        {
+            border: 0;
+            background-color: #EEE;
+            border-bottom: #c9d7f1 1px solid;
+            height: 0px;
+            width: 99.9%;
+            text-align: left;
+            margin-top: 1em;
+            margin-bottom: 1em;
+        }
+        #fileMedia
+        {
+            width: 100%;
+        }
+        .button
+        {
+            width:6em;
+            height:2em;
+        }
+        
+        fieldset
+        {
+        	padding:1em;
+        	
+        }
+        legend
+        {
+        	padding:0.5em;
+        }
+    </style>
+</head>
+<body>
+
+    <table style="width:100%;">
+        <tr>
+            <td>
+                <h2 id="labelOptions">Options</h2>
+            </td>
+        </tr>
+        <tr>
+            <td>
+        <input id="buttonAddSpace" type="checkbox" /><label for="buttonAddSpace" id="labelAddSpace">Add space before first line of paragraph</label></td>
+        </tr>
+        <tr>
+            <td>
+                <hr />
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <b><span id="labelNote">Notice: Can not undo</span></b><span id="labelSpaceText">&nbsp;&nbsp;</span>
+            </td>
+        </tr>
+        <tr>
+            <td align="right">
+        <input id="buttonOK" type="button" value="OK" onclick="CloseDialog(1);" style="width: 70px; padding-top:3px;" />&nbsp;&nbsp;&nbsp;
+        <input id="buttonCancel" type="button" value="Cancel" onclick="CloseDialog(0);" style="width: 70px; padding-top:3px;" /></td>
+        </tr>
+    </table>
+
+    <script language="JavaScript" type="text/jscript">
+        //
+        var objApp = window.external;
+        var pluginPath = objApp.GetHtmlDocumentPath(WizChromeBrowser);
+        var languageFileName = pluginPath + "formattext.ini";
+        //
+        objApp.LocalizeHtmlDocument(languageFileName, WizChromeBrowser);
+        //
+        var objTools = objApp.CreateCommonTools();
+        //
+        var spaceText = labelSpaceText.innerHTML;
+        //
+        var objBrowser = objApp.EditorBrowserObject;
+        //
+        function DBC2SBC(str) {
+            return str;
+            /*
+            var result = '';
+            for (var i = 0; i < str.length; i++) {
+                code = str.charCodeAt(i);
+                // “65281”是“！”，“65373”是“｝”，“65292”是“，”。不转换"，"
+
+                if (code >= 65281 && code < 65373 && code != 65292 && code != 65306) {
+                    //  “65248”是转换码距
+                    result += String.fromCharCode(str.charCodeAt(i) - 65248);
+                } else {
+                    result += str.charAt(i);
+                }
+            }
+            return result;
+            */
+        }
+
+        String.prototype.trim = function() {
+            return this.replace(/(^[\s　]*)|([\s　]*$)/g, "");
+        };
+
+        String.prototype.leftTrim = function() {
+            return this.replace(/(^\s*)/g, "");
+        };
+
+        String.prototype.rightTrim = function() {
+            return this.replace(/(\s*$)/g, "");
+        };
+
+        function getBool(key) {
+            return objTools.GetValueFromReg("hkcu", "Software\\Wiz\\WizTools", key) == 1;
+        }
+        function setBool(key, val) {
+            objTools.SetValueToReg("hkcu", "Software\\Wiz\\WizTools", key, val ? "1" : "0", "REG_SZ") == 1;
+        }
+
+        //
+        buttonAddSpace.checked = getBool("formattext_addspace");
+
+        function processFormatText(textContext) {
+            var text = DBC2SBC(textContext);
+            var prefix = "　　";
+            var tmps = text.split("\n");
+            var html = "";
+            for (i = 0; i < tmps.length; i++) {
+                var tmp = tmps[i].trim();
+                if (tmp.length > 0) {
+                    if (buttonAddSpace.checked)
+                        html += "<p>" + spaceText + tmp + "</p>\n";
+                    else
+                        html += "<p>" + tmp + "</p>\n";
+                }
+            }
+            return html;
+        }
+        /////////////////////////////////////////////////////////////////////////////////////////////////
+        function formattext_GetImages() {
+            var imgs = document.images;
+            var array = [];
+            if (imgs != null && imgs.length > 0) {
+                //
+                for (i = 0; i < imgs.length; i++) {
+                    var imgAtt = {
+                        "alt": imgs[i].alt,
+                        "src": imgs[i].src,
+                        "width": imgs[i].width,
+                        "height": imgs[i].height,
+                        "align": imgs[i].align,
+                    }
+                    array.push(imgAtt);
+                }
+                var json = JSON.stringify(array);
+                return json;
+            }   
+        }
+        objBrowser.ExecuteScript(formattext_GetImages.toString(), null);
+        //
+        function formattext_SetImagesAndGetInnerText(){
+            var imgs = document.images;
+            var formatImgCount = 0;
+			while(imgs.length > 0){
+				imgs[0].outerHTML = "#FormatImgID_" + formatImgCount + "#";
+				formatImgCount++;
+			}
+            return document.body.innerText;
+        }
+        objBrowser.ExecuteScript(formattext_SetImagesAndGetInnerText.toString(), null);
+        function formattext_ResetInnerHtml(html) {
+            document.body.innerHTML = html;
+        }
+        objBrowser.ExecuteScript(formattext_ResetInnerHtml.toString(), null);
+        //////////////////////////////////////////////////////////////////////////////////////////////////
+        function FormatText() {
+            var temps = new Array();
+
+            isPart = false; //暂时无法实现局部格式化
+            if (!isPart) {
+                objBrowser.ExecuteFunction0("formattext_GetImages", function (ret) {
+                    if (ret && ret.length > 0) {
+                        var imgs = JSON.parse(ret);
+						console.log(imgs);
+                        //
+                        for (j = 0; j < imgs.length; j++) {
+                            var t = document.createElement("IMG");
+                            t.alt = imgs[j].alt;
+                            t.src = imgs[j].src;
+                            t.width = imgs[j].width;
+                            t.height = imgs[j].height;
+                            t.align = imgs[j].align;
+                            temps.push(t);
+                        }
+                    }
+                    //
+					console.log(temps);
+                    objBrowser.ExecuteFunction0("formattext_SetImagesAndGetInnerText", function (ret) {
+                        //
+                        if (ret && ret.length > 0) {
+                            var text = ret;
+                            var html = processFormatText(text);
+                            if (temps != null && temps.length > 0) {
+                                for (j = 0; j < temps.length; j++) {
+                                    var imghtml = "<center><img src=\"" + temps[j].src + "\" alt=\"" + temps[j].alt + "\" width=\"" + temps[j].width + "\" height=\"" + temps[j].height + "\" align=\"" + temps[j].align + "\"></center>";
+                                    html = html.replace("#FormatImgID_" + j + "#", imghtml);
+                                }
+                            }
+                            objBrowser.ExecuteFunction1("formattext_ResetInnerHtml", html, null);
+                        }
+                        //
+                        objApp.ClosePluginDlg(WizChromeBrowser, 1);
+                    });
+                });
+            } else {
+                var html = processFormatText(tmpText).replace('\\', "\\\\").replace(/\r?\n/ig, '\\n');
+                objBrowser.ExecuteScript("WizEditor.insertHtml('" + html + "'", function (ret) {
+                    objApp.ClosePluginDlg(WizChromeBrowser, 1);
+                });
+            }
+        }
+        //
+        function CloseDialog(ret) {
+            if (1 == ret) {
+                setBool("formattext_addspace", buttonAddSpace.checked);
+                FormatText();
+            } else {
+                objApp.ClosePluginDlg(WizChromeBrowser, ret);
+            }
+            
+        }
+        //
+    </script>
+</body>
+</html>
