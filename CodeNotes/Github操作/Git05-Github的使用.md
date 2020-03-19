@@ -68,6 +68,8 @@ cat ~/.ssh/id_rsa.pub
 
 # git删除远程仓库的文件或目录
 
+(网络博客)
+
 ```cpp
 git rm -r --cached a/2.txt //删除a目录下的2.txt文件   删除a目录git rm -r --cached a
 git commit -m "删除a目录下的2.txt文件" 
