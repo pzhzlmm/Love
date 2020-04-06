@@ -1570,7 +1570,7 @@ mysql> EXPLAIN select * from t_emp emp ,t_dept dept where emp.name = 'aaa'
 
 1)   Using filesort
 
-说明mysql会对数据使用一个外部的索引排序，而不是按照表内的索引顺序进行读取。MySQL中无法利用索引完成的排序操作称为“文件排序”。
+说明mysql会对数据使用一个外部的索引排序，而不是按照表内的索引顺序进行读取。MySQL中无法利用索引完成的排序操作称为“文件排序”。一定要优化
 
 注意: 测试表数据不能太小。
 
