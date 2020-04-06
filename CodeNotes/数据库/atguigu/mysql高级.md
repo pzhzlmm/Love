@@ -375,7 +375,7 @@ lower_case_table_names = 1
 
   sql_mode定义了对Mysql中sql语句语法的校验规则！
 
-sql_mode是个很容易被忽视的变量，如果设置为空值（非严格模式），在这种情况下是可以允许一些非法操作的，比如允许一些非法数据的插入。在生产环境必须将这个值设置为严格模式，所以开发、测试环境的数据库也必须要设置，这样在开发测试阶段就可以发现问题。
+sql_mode是个很容易被忽视的变量，如果设置为空值（非严格模式），在这种情况下是可以允许一些非法操作的，比如允许一些非法数据的插入。在生产环境必须将这个值设置为严格模式，所以开发、测试环境的数据库也必须要设置，这样在开发测试阶段就可以发现问题。5.7以后默认都是严格模式了
 
 （1） sql_mode常用的值
 
@@ -400,7 +400,7 @@ sql_mode是个很容易被忽视的变量，如果设置为空值（非严格模
 
 mysql> set @@sql_mode='';
 
-（4） 永久修改，需要在配置文件my.cnf中修改
+（4） 永久修改，需要在配置文件my.cnf中修改(一般不会这么做)
 
 [root@hadoop102 ~]$ vim /etc/my.cnf
 
@@ -430,13 +430,19 @@ INSERT INTO mytbl2 VALUES(5,'tian7',36,102);
 
 错误结果：
 
-SELECT NAME,dept,MAX(age) FROM mytbl2 GROUP BY dept;
+SELECT NAME,dept,MAX(age) FROM mytbl2 GROUP BY dept;(select出现问题,仍然会把结果返回回来了)
+
+ 组标识:标识你是哪个组的,一般即分组字段,分组之后不能出现非
+
+分组:group by以后,select后面只能跟组标识及聚合函数(组函数)
+
+非严格不会报错,严格模式会报错: Expression #1 of SELECT list is not in GROUP BY clause and contains nonaggregated column 'mydb.mytbl2.NAME' which is not functionally dependent on columns in GROUP BY clause; this is incompatible with sql_mode=only_full_group_by
 
 正确结果：
 
 SELECT id,name,ab.dept,ab.maxage FROM mytbl2 m INNER JOIN(SELECT dept,MAX(age)maxage FROM mytbl2 GROUP BY dept)ab ON ab.dept=m.dept AND m.age=ab.maxage;
 
- 
+![image-20200406091637576](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200406091637576.png)
 
 ## 2.3 MySQL的用户管理
 
@@ -731,6 +737,8 @@ Federated引擎是访问其他MySQL服务器的一个代理，尽管该引擎看
 # 第3章SQL预热***
 
 ## 3.1 常见的Join查询图
+
+用内外根据查询结果来判断,内只有交集,左外(=b右外链a),区分主从表匹配表
 
 内连接: A inner join B on  
 
