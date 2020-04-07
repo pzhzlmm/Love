@@ -904,7 +904,7 @@ sed [选项参数]  ‘command’ filename
 
 ## awk
 
-一个强大的文本分析工具，把文件逐行的读入，以空格为默认分隔符将每行切片，切开的部分再进行分析处理。
+一个强大的文本查找处理,分析工具，把文件逐行的读入，以空格为默认分隔符将每行切片，切开的部分再进行分析处理。
 
 \1.   基本用法
 
@@ -988,6 +988,72 @@ action：在找到匹配内容时所执行的一系列命令
 5
 
 ![image-20200407163907585](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407163907585.png)
+
+![image-20200407195819748](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407195819748.png)
+
+这个功能和cat同样,但是awk可以指定列输出(0代表输出整行)
+
+![image-20200407195947640](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407195947640.png)
+
+如果想要对齐:
+
+![image-20200407200040038](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407200040038.png)
+
+在awk里,一横行叫做一个record,一竖行叫做一个field
+
+nr:number of record 横行的数量
+
+NF:number of field 竖行的数量
+
+由此,要打印横行的数量:
+
+![image-20200407200327598](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407200327598.png)
+
+AWK把空格当做连接符号,输出时两列连接在一起,因此要答应空格可以用,去替代默认的分隔符,当然也可以自定义制表分隔符
+
+![image-20200407200612872](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407200612872.png)
+
+输出第三列为1986的写法:
+
+![image-20200407200934999](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407200934999.png)
+
+awk会把空格也单算,因此这个会看做为三列
+
+![image-20200407200745413](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407200745413.png)
+
+打印每一行有多少段
+
+![image-20200407201120161](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407201120161.png)
+
+输出第七行的内容
+
+![image-20200407201340541](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407201340541.png)
+
+输出有七段的内容
+
+![image-20200407201400687](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407201400687.png)
+
+如果不输入文件名,则等待用户输入
+
+![image-20200407201643357](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407201643357.png)
+
+如果有,存在的话,那么awt默认会把它们看做是一个整体
+
+自定义分割符的写法:这个语句是把','变成了分隔符
+
+![image-20200407201844805](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407201844805.png)
+
+输出分隔符也可以改成,
+
+![image-20200407201931085](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407201931085.png)
+
+输入输出同时改变
+
+![image-20200407201957319](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407201957319.png)
+
+awk后接两个文件,后面的文件内容会被拼接在内容之后****
+
+![image-20200407202147239](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407202147239.png)
 
 ## sort
 
