@@ -1,0 +1,384 @@
+
+
+# 20-04-07
+
+# Shell概念
+
+![image-20200407090318367](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407090318367-1586221723406.png)
+
+代码,分为编译执行(java),解释执行(html,js,python,脚本,shell)
+
+## shell解析器
+
+位置:cat /etc/shells
+
+![image-20200407091412900](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407091412900.png)
+
+sh软连到bash,用哪个都行,以后直接使用bin/bash即可
+
+![image-20200407091520393](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407091520393.png)
+
+![image-20200407091653192](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407091653192.png)
+
+# 脚本编写
+
+虽然linux不强调后缀,但推荐以.sh结尾,便于阅读
+
+## 编写
+
+第一行指定shell的解析器
+
+![image-20200407092145273](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407092145273.png)
+
+## 给权限***
+
+![image-20200407092402440](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407092402440.png)
+
+## 执行
+
+### 方法一:bash/sh 命令名
+
+![image-20200407092300633](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407092300633.png)
+
+等同于 /bin/bash helloworld.sh
+
+因为已经指定执行器,因而这种执行方式内部声明的解析器没有起作用
+
+### 方法二: .+路径+命令
+
+直接执行helloworld.sh 需要环境变量里配置过(类似于win的环境变量)
+
+用.当前路径或者用绝对路径
+
+![image-20200407093359600](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407093359600.png)
+
+#### export  全局变量设置***
+
+格式:export PATH=$PATH 路径
+
+![image-20200407093719488](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407093719488.png)
+
+![image-20200407093707767](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407093707767.png)
+
+### 方法三:. 空格 命令
+
+![image-20200407094003016](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407094003016.png)
+
+![image-20200407094108664](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407094108664.png)
+
+![image-20200407094145472](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407094145472.png)
+
+![image-20200407094251314](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407094251314.png)
+
+.空格 是在当前shell里去执行调用,而不是用父shell去调用子shell,调用完被释放
+
+子shell 里面 export 的才能看到,有时候需要用到变量,又不想改变原有的值就在子shell里面异步处理
+
+## 多命令处理
+
+需求:在/home/atguigu/目录下创建一个banzhang.txt,在banzhang.txt文件中增加“I love cls”。
+
+![image-20200407094953591](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407094953591.png)
+
+编写执行
+
+![image-20200407095127127](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407095127127.png)
+
+# 自定义变量
+
+## 基本语法
+
+1. （1）定义变量：变量=值 (=两侧不允许有空格)
+2. （2）撤销变量：unset 变量
+3. （3）声明静态变量：readonly变量，注意：不能unset
+
+![image-20200407101836991](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407101836991.png)
+
+![image-20200407102009382](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407102009382.png)
+
+## 变量定义规则
+
+1. ​	变量名称可以由字母、数字和下划线组成，但是不能以数字开头，环境变量名建议大写。
+2. ​	等号两侧不能有空格
+3. ​	在bash中，变量默认类型都是字符串类型，无法直接进行数值运算。
+4. ​	变量的值如果有空格，需要使用双引号或单引号括起来。
+
+![image-20200407102229414](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407102229414.png)
+
+## 变量提升为全局变量
+
+![image-20200407102654511](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407102654511.png)
+
+![image-20200407102637838](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407102637838.png)
+
+环境变量里配置的都是全局的
+
+# $
+
+- $:查看变量得用$+名字引用可查看系统变量
+
+![image-20200407101441797](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407101441797.png)
+
+## $1
+
+- $1:代表传进来的第一个参数
+
+![image-20200407095607319](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407095607319.png)
+
+![image-20200407095618632](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407095618632.png)
+
+![image-20200407095626664](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407095626664.png)
+
+## $n
+
+- ​	$n	（功能描述：n为数字，$0代表该脚本名称，$1-$9代表第一到第九个参数，十以上的参数，十以上的参数需要用大括号包含，如${10}）
+
+（1）输出该脚本文件名称、输入参数1和输入参数2 的值
+
+```shell
+[atguigu@hadoop101 datas]$ touch parameter.sh 
+
+[atguigu@hadoop101 datas]$ vim parameter.sh
+
+\#!/bin/bash
+
+echo "$0  $1  $2"
+
+[atguigu@hadoop101 datas]$ chmod 777 parameter.sh
+
+[atguigu@hadoop101 datas]$ ./parameter.sh cls  xz
+
+./parameter.sh  cls  xz
+```
+
+![image-20200407103334470](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407103334470.png)
+
+![image-20200407103444512](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407103444512.png)
+
+## $#
+
+- ​	$#	（功能描述：获取所有输入参数个数，常用于循环）。
+
+获取输入参数的个数
+
+```shell
+[atguigu@hadoop101 datas]$ vim parameter.sh
+
+ 
+
+\#!/bin/bash
+
+echo "$0  $1  $2"
+
+echo $#
+
+ 
+
+[atguigu@hadoop101 datas]$ chmod 777 parameter.sh
+
+ 
+
+[atguigu@hadoop101 datas]$ ./parameter.sh cls  xz
+
+parameter.sh cls xz 
+
+2
+```
+
+![image-20200407103916303](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407103916303.png)
+
+使用''来代表不解析
+
+![image-20200407104000935](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407104000935.png)
+
+![image-20200407104020524](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407104020524.png)
+
+作用:可以用$#来做解析
+
+## $*,$@
+
+- ​	$*	（功能描述：这个变量代表命令行中所有的参数，$*把所有的参数看成一个整体）
+- ​	$@	（功能描述：这个变量也代表命令行中所有的参数，不过$@把每个参数区分对待）
+
+![image-20200407104322498](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407104322498.png)
+
+*会把AA BB CC看成一个值,而@会区分对待
+
+![image-20200407104616022](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407104616022.png)
+
+![image-20200407104826516](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407104826516.png)
+
+## $？
+
+看上一个命令是否执行成功,0成功,非0失败
+
+$？	（功能描述：最后一次执行的命令的返回状态。如果这个变量的值为0，证明上一个命令正确执行；如果这个变量的值为非0（具体是哪个数，由命令自己来决定），则证明上一个命令执行不正确了。）
+
+![image-20200407105003484](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407105003484.png)
+
+还可以获取函数的返回值
+
+## 实例:通过shell实现mysql的启动,状态查看,停止
+
+![image-20200407105730205](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407105730205.png)
+
+赋权执行:
+
+![image-20200407105811603](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407105811603.png)
+
+# 运算符		
+
+1．基本语法
+
+（1）“$((运算式))”或“$[运算式]”
+
+（2）expr  + , - , \*,  /,  %   加，减，乘，除，取余
+
+注意：expr运算符间要有空格
+
+2．案例实操： 
+
+1. 计算3+2的值:expr 2 + 3
+
+5
+
+![image-20200407112025083](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407112025083.png)
+
+
+
+![image-20200407112823483](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407112823483.png)
+
+# 第6章 条件判断
+
+1．基本语法
+
+[ condition ]（注意condition前后要有空格）
+
+注意：条件非空即为true，[ atguigu ]返回true，[] 返回false。
+
+\2. 常用判断条件
+
+（1）两个整数之间比较
+
+= 字符串比较
+
+-lt 小于（less than）         -le 小于等于（less equal）
+
+-eq 等于（equal）           -gt 大于（greater than）
+
+-ge 大于等于（greater equal）  -ne 不等于（Not equal）
+
+（2）按照文件权限进行判断
+
+-r 有读的权限（read）       -w 有写的权限（write）
+
+-x 有执行的权限（execute）
+
+（3）按照文件类型进行判断
+
+-f 文件存在并且是一个常规的文件（file）
+
+-e 文件存在（existence）      -d 文件存在并是一个目录（directory）
+
+3．案例实操
+
+​    （1）23是否大于等于22
+
+[atguigu@hadoop101 datas]$ [ 23 -ge 22 ]
+
+[atguigu@hadoop101 datas]$ echo $?
+
+0
+
+![image-20200407112956309](20-04-07md.assets/image-20200407112956309.png)
+
+​    （2）helloworld.sh是否具有写权限
+
+[atguigu@hadoop101 datas]$ [ -w helloworld.sh ]
+
+![image-20200407113102492](20-04-07md.assets/image-20200407113102492.png)
+
+​    （3）/home/atguigu/cls.txt目录中的文件是否存在 [ -e /home/atguigu/cls.txt ]
+
+![image-20200407113253233](20-04-07md.assets/image-20200407113253233.png)
+
+（4）多条件判断（&& 表示前一条命令执行成功时，才执行后一条命令，|| 表示上一条命令执行失败后，才执行下一条命令）
+
+[atguigu@hadoop101 ~]$ [ condition ] && echo OK || echo notok
+
+OK
+
+[atguigu@hadoop101 datas]$ [ condition ] && [ ] || echo notok
+
+notok
+
+# 流程控制（重点）
+
+## if 判断
+
+1．基本语法
+
+if [ 条件判断式 ];then
+
+ 程序
+
+fi
+
+或者
+
+if  [ 条件判断式 ]
+
+ then
+
+  程序
+
+fi
+
+​    注意事项：
+
+（1）[ 条件判断式 ]，中括号和条件判断式之间必须有空格
+
+（2）if后要有空格
+
+2．案例实操
+
+（1）输入一个数字，如果是1，则输出banzhang zhen shuai，如果是2，则输出 cls zhen mei，如果是其它，什么也不输出。
+
+![image-20200407115054428](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407115054428.png)
+
+![image-20200407115133562](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200407115133562.png)
+
+```shell
+[atguigu@hadoop101 datas]$ touch if.sh
+
+[atguigu@hadoop101 datas]$ vim if.sh
+
+ 
+
+\#!/bin/bash
+
+ 
+
+if [ $1 -eq "1" ]
+
+then
+
+​    echo "banzhang zhen shuai"
+
+elif [ $1 -eq "2" ]
+
+then
+
+​    echo "cls zhen mei"
+
+fi
+
+ 
+
+[atguigu@hadoop101 datas]$ chmod 777 if.sh
+
+[atguigu@hadoop101 datas]$ ./if.sh 1
+
+banzhang zhen shuai
+```
+
