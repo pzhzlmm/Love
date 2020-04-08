@@ -202,12 +202,6 @@ ResourceManager:Yarn大哥,和客户端交互,整个集群的资源的管理者,
 
 (一个AM的Container是可能分配在不同的节点)都是以Container为单位,分配好的资源用一个Container做一个封装(好处:方便管理,不允许其他资源侵占我的地盘)
 
-![image-20200408113629583](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200408113629583.png)
-
-举例$$$:
-
-
-
 ### 2.5.3 MapReduce架构概述
 
 先分再合,每个人分一部分数据,一起算,然后把算好的结果进行汇总
