@@ -64,9 +64,7 @@ hdfs存储不是以文件为单位,而是以文件块为单位(只拆不合)
 
 参考硬件性能(磁盘传输速率)可改为256,512(即希望1s能读完一个块)
 
-
-
-![img](hdfs.assets/1586308204254-0d4baceb-8ca8-4712-8c4a-8a33330548a9.png)
+![image-20200413085247017](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200413085247017.png)
 
 文件块的大小可以根据配置文件进行配置
 
@@ -348,24 +346,35 @@ san gu mao lu
 
 ​     ![img](hdfs.assets/1586308204779-49a905d6-3740-4b4a-a985-ba1fe2ae554e.png)
 
+![image-20200413090435629](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200413090435629.png)
+
+win本地库
+
+![image-20200413090543203](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200413090543203.png)
+
 图3-2 windows依赖存放
 
 2．配置HADOOP_HOME环境变量，如图3-3所示。
 
-![img](hdfs.assets/1586308205082-7b5eb0f5-59e9-4e38-9cde-2fbc558e6427.png)
+![image-20200413090629240](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200413090629240.png)
 
 图3-3 配置HADOOP_HOME环境变量
 
 \3. 配置Path环境变量，如图3-4所示。然后重启电脑
 
-![img](hdfs.assets/1586308205690-51308df1-0a78-417b-9876-33d69304eb28.png)
+![image-20200413090742688](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200413090742688.png)
 
 图3-4 配置Path环境变量
+
+把hadoop.dll拷贝到system32目录下
+
+![image-20200413090924898](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200413090924898.png)
 
 4．创建一个Maven工程
 
 5．导入相应的依赖坐标+日志添加
 
+```xml
 <dependencies>
 
   <dependency>
@@ -399,9 +408,15 @@ san gu mao lu
   </dependency>
 
 </dependencies>
+```
+
+或者
+
+![image-20200413091720906](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200413091720906.png)
 
 在项目的src/main /resources目录下，新建一个文件，命名为“log4j2.xml”，在文件中填入
 
+```xml
 <?xml version="1.0" encoding="UTF-8"?>
 
 <Configuration status="error" strict="true" name="XMLConfig">
@@ -453,10 +468,17 @@ san gu mao lu
  
 
 </Configuration>
+```
+
+![image-20200413092143848](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200413092143848.png)
 
 6．创建包名：com.atguigu.hdfs
 
 7．创建HdfsClient类
+
+![image-20200413092400623](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200413092400623.png)
+
+![image-20200413092426471](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200413092426471.png)
 
 public class HdfsClient{ 
 
@@ -487,6 +509,16 @@ public class HdfsClient{
 8．执行程序
 
 ## 3.2 HDFS的API操作
+
+![image-20200413094533683](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200413094533683.png)
+
+![image-20200413094848742](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200413094848742.png)
+
+![image-20200413094719581](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200413094719581.png)
+
+代码中的conf优先级最高客户端优先级比集群优先级高:defualt-site-客户端-代码中的configuration
+
+![image-20200413095023701](https://sumomoriaty.oss-cn-beijing.aliyuncs.com/image-20200413095023701.png)
 
 ### 3.2.1 HDFS文件上传（测试参数优先级）
 
